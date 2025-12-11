@@ -1,0 +1,547 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- สร้าง Window
+local Window = Rayfield:CreateWindow({
+   Name = "ชายน้อย  อมตะ2.0",
+   Icon = nil,
+   LoadingTitle = "ยินดีต้อนรับ Power Panel v2.0 สคริปต์ของไลฟ์สาระ ไปวันๆ",
+   LoadingSubtitle = "power panel team",
+   ShowText = "Rayfield",
+   Theme = "DarkBlue",
+   ToggleUIKeybind = "K",
+   DisableRayfieldPrompts = true,
+   DisableBuildWarnings = true,
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil,
+      FileName = "Big Hub"
+   },
+   Discord = {
+      Enabled = false,
+      Invite = "noinvitelink",
+      RememberJoins = true
+   },
+   KeySystem = false,
+   KeySettings = {
+      Title = "ระบบคีย์",
+      Subtitle = "ไปหาซื้อคีย์มาใส่",
+      Note = "No method of obtaining the key is provided",
+      FileName = "Key",
+      SaveKey = true,
+      GrabKeyFromSite = false,
+      Key = {"Hello"}
+   }
+})
+
+-- ตัวแปรระบบ
+local Players = game:GetService("Players")
+local RS = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local humanoid = char:WaitForChild("Humanoid")
+
+-- ตัวแปรฟังก์ชัน
+local flying = false
+local vv, gyro
+local flySpeed = 200
+local superSpeed = false
+local runSpeed = 32
+local noclipEnabled = false
+local infJumpEnabled = false
+
+-- === ฟังก์ชันบิน ===
+local function startFlying()
+    if flying then return end
+    flying = true
+    humanoid.PlatformStand = true
+    vv = Instance.new("BodyVelocity")
+    vv.MaxForce = Vector3.new(1e5,1e5,1e5)
+    vv.P = 1250
+    vv.Velocity = Vector3.zero
+    vv.Parent = hrp
+    gyro = Instance.new("BodyGyro")
+    gyro.MaxTorque = Vector3.new(4e5,4e5,4e5)
+    gyro.P = 3000
+    gyro.CFrame = hrp.CFrame
+    gyro.Parent = hrp
+    Rayfield:Notify({Title = "โหมดบินเปิด!", Content = "ใช้ W,A,S,D,Space,Ctrl เพื่อควบคุม", Duration = 3, Image = 6026568198})
+end
+
+local function stopFlying()
+    if not flying then return end
+    flying = false
+    if vv then vv:Destroy() vv=nil end
+    if gyro then gyro:Destroy() gyro=nil end
+    humanoid.PlatformStand = false
+    Rayfield:Notify({Title = "โหมดบินปิด", Content = "ลงจอดเรียบร้อย", Duration = 3, Image = 6026568198})
+end
+
+-- ฟังก์ชันวิ่งเร็ว
+local function toggleSpeed(on)
+    superSpeed = on
+    humanoid.WalkSpeed = superSpeed and runSpeed or 16
+    Rayfield:Notify({Title = superSpeed and "วิ่งเร็วเปิด" or "วิ่งเร็วปิด", Content = superSpeed and "วิ่งเร็วสุดขีด!" or "กลับสู่ความเร็วปกติ", Duration = 3, Image = 6023426921})
+end
+
+-- === แท็บตัวละคร ===
+local MainTab = Window:CreateTab("ใช้บ่อย")
+local UserInputService = game:GetService("UserInputService")
+local godmodeToggled = false
+
+MainTab:CreateButton({Name = "อมตะหี",Callback = function()loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/godmode"))()game:GetService("StarterGui"):SetCore("SendNotification", {Title = "สำเร็จ!",Text = "Godmode Active",Duration = 3})end})
+MainTab:CreateButton({Name = "หนีกลับบ้าน",Callback = function()local char = player.Character or player.CharacterAdded:Wait()local hrp = char:WaitForChild("HumanoidRootPart")hrp.CFrame = CFrame.new(12.079488, 0, 3.2662038, 0, 0, 1, 0, 1, 0, -1, 0, 0)Rayfield:Notify({Title="วาปด่วน!", Content="ถึงแล้ว", Duration=2, Image=13014647359})end})
+MainTab:CreateButton({Name = "เติมไฟ",Callback = function()loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/getfire"))()game:GetService("StarterGui"):SetCore("SendNotification", {Title = "สำเร็จ!",Text = "เติมไฟเรียบร้อย",Duration = 3})end})
+MainTab:CreateButton({Name = "เติมอาหาร",Callback = function()loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/food"))()game:GetService("StarterGui"):SetCore("SendNotification", {Title = "สำเร็จ!",Text = "เติมอาหารเรียบร้อย",Duration = 3})end})
+MainTab:CreateButton({Name = "เติมยา",Callback = function()loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/getbandage"))()game:GetService("StarterGui"):SetCore("SendNotification", {Title = "สำเร็จ!",Text = "เติมยา",Duration = 3})end})
+MainTab:CreateButton({Name = "เติมเครื่องบด",Callback = function()loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/getiron"))()game:GetService("StarterGui"):SetCore("SendNotification", {Title = "สำเร็จ!",Text = "เครื่องบด",Duration = 3})end})
+local flyToggle = MainTab:CreateToggle({Name="เปิด/ปิด การบิน", CurrentValue=false, Flag="FlyToggle", Callback=function(val) if val then startFlying() else stopFlying() end end})
+MainTab:CreateButton({
+    Name = "🔥 ปิดหมอกถาวร",
+    Callback = function()
+        local Lighting = game:GetService("Lighting")
+        
+        -- ตั้งค่า Fog ให้หายไป (visibility 100000 studs)
+        Lighting.FogEnd = 100000
+        Lighting.FogStart = 0  -- เริ่มหมอกไกลสุด
+        
+        -- ลบ Atmosphere ถ้ามี (จะ disable fog อัตโนมัติ)
+        for _, v in pairs(Lighting:GetDescendants()) do
+            if v:IsA("Atmosphere") then
+                v:Destroy()
+            end
+        end
+        
+        -- ป้องกันเกมเซ็ตค่ากลับ (ถาวร 100%)
+        Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
+            Lighting.FogEnd = 100000
+        end)
+        Lighting.DescendantAdded:Connect(function(v)
+            if v:IsA("Atmosphere") then
+                v:Destroy()
+            end
+        end)
+        
+        Rayfield:Notify({
+            Title = "ปิดหมอกสำเร็จ! 🔥",
+            Content = "มองเห็นไกลสุดขีด ถาวรไม่กลับมา",
+            Duration = 4
+        })
+    end
+})
+
+
+-- ปุ่มอมตะแบบ Keybind (กด Numpad1 เพื่อเปิด Godmode)
+MainTab:CreateKeybind({
+    Name = "อมตะ (Godmode)",
+    CurrentKeybind = "KeypadOne",  -- หรือ "Numpad1" ก็ได้
+    HoldToInteract = false,        -- กดครั้งเดียวทำงาน
+    Callback = function()
+        -- โหลดและรันสคริปต์ Godmode
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/godmode"))()
+        
+        -- หรือถ้าใช้ Rayfield Notify (สวยกว่า)
+        Rayfield:Notify({
+            Title = "อมตะเปิดใช้งาน!",
+            Content = "Godmode Active แล้ว",
+            Duration = 4,
+            Image = 13014647359  -- ไอคอน Roblox (ถ้ามี)
+        })
+    end
+})
+
+
+MainTab:CreateKeybind({
+    Name = "หนีกลับบ้าน (Hotkey)",
+    CurrentKeybind = "KeypadTwo",  -- หรือ "Numpad2" ก็ได้
+    HoldToInteract = false,        -- false = กดครั้งเดียวทำงาน, true = ต้องกดค้าง
+    Callback = function()
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        hrp.CFrame = CFrame.new(12.079488, 0, 3.2662038, 0, 0, 1, 0, 1, 0, -1, 0, 0)
+        Rayfield:Notify({
+            Title = "หนีกลับบ้าน",
+            Content = "ถึงแล้ว",
+            Duration = 2,
+            Image = 13014647359
+        })
+    end
+})
+
+MainTab:CreateKeybind({
+    Name = "เติมไฟ",
+    CurrentKeybind = "KeypadThree",  -- หรือ "Numpad1" ก็ได้
+    HoldToInteract = false,        -- กดครั้งเดียวทำงาน
+    Callback = function()
+        -- โหลดและรันสคริปต์ Godmode
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/getfire"))()
+
+        -- หรือถ้าใช้ Rayfield Notify (สวยกว่า)
+        Rayfield:Notify({
+            Title = "สำเร็จ!",
+            Content = "เติมไฟแล้ว",
+            Duration = 4,
+            Image = 13014647359  -- ไอคอน Roblox (ถ้ามี)
+        })
+    end
+})
+
+MainTab:CreateKeybind({
+    Name = "เติมอาหาร",
+    CurrentKeybind = "KeypadZero",  -- หรือ "Numpad1" ก็ได้
+    HoldToInteract = false,        -- กดครั้งเดียวทำงาน
+    Callback = function()
+        -- โหลดและรันสคริปต์ Godmode
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/food"))()
+        
+        -- หรือถ้าใช้ Rayfield Notify (สวยกว่า)
+        Rayfield:Notify({
+            Title = "อาหาร",
+            Content = "ดึงอาหาร แล้ว",
+            Duration = 4,
+            Image = 13014647359  -- ไอคอน Roblox (ถ้ามี)
+        })
+    end
+})
+
+MainTab:CreateKeybind({
+    Name = "เติมยา",
+    CurrentKeybind = "KeypadFour",  -- หรือ "Numpad1" ก็ได้
+    HoldToInteract = false,        -- กดครั้งเดียวทำงาน
+    Callback = function()
+        -- โหลดและรันสคริปต์ Godmode
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/getbandage"))()
+
+        -- หรือถ้าใช้ Rayfield Notify (สวยกว่า)
+        Rayfield:Notify({
+            Title = "สำเร็จ!",
+            Content = "เติมยาแล้ว",
+            Duration = 4,
+            Image = 13014647359  -- ไอคอน Roblox (ถ้ามี)
+        })
+    end
+})
+
+MainTab:CreateKeybind({
+    Name = "เติมเครื่องบด",
+    CurrentKeybind = "KeypadFive",  -- หรือ "Numpad1" ก็ได้
+    HoldToInteract = false,        -- กดครั้งเดียวทำงาน
+    Callback = function()
+        -- โหลดและรันสคริปต์ Godmode
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/livezalaeveryday/99-Night-Forest/refs/heads/main/getiron"))()
+
+        -- หรือถ้าใช้ Rayfield Notify (สวยกว่า)
+        Rayfield:Notify({
+            Title = "สำเร็จ!",
+            Content = "เติมเครื่องบดแล้ว",
+            Duration = 4,
+            Image = 13014647359  -- ไอคอน Roblox (ถ้ามี)
+        })
+    end
+})
+
+
+-- Toggle การบิน (Flag = "FlyToggle")
+local flyToggle = MainTab:CreateToggle({
+    Name = "เปิด/ปิด การบิน",
+    CurrentValue = false,
+    Flag = "FlyToggle",
+    Callback = function(val)
+        if val then
+            startFlying()
+        else
+            stopFlying()
+        end
+    end
+})
+
+-- Hotkey สำหรับ Toggle การบิน (กด Numpad3 เพื่อเปิด/ปิด)
+MainTab:CreateKeybind({
+    Name = "การบิน (Hotkey)",
+    CurrentKeybind = "KeypadSix",  -- หรือ "Numpad3"
+    HoldToInteract = false,          -- กดครั้งเดียว Toggle
+    Callback = function()
+        -- Toggle ค่า FlyToggle (จาก false เป็น true หรือ true เป็น false)
+        local newValue = not flyToggle.CurrentValue
+        flyToggle:Set(newValue)  -- Set ค่าใหม่ (จะเรียก Callback อัตโนมัติ)
+        
+        Rayfield:Notify({
+            Title = "การบิน",
+            Content = newValue and "เปิดแล้ว (กด Numpad3)" or "ปิดแล้ว (กด Numpad3)",
+            Duration = 2,
+            Image = 13014647359
+        })
+    end
+})
+
+MainTab:CreateKeybind({
+    Name = "ปิดหมอกถาวร (Hotkey)",
+    CurrentKeybind = "KeypadSeven",  -- หรือ "Numpad4"
+    HoldToInteract = false,         -- กดครั้งเดียวทำงาน
+    Callback = function()
+        local Lighting = game:GetService("Lighting")
+        
+        -- ตั้งค่า Fog ให้หายไป (visibility 100000 studs)
+        Lighting.FogEnd = 100000
+        Lighting.FogStart = 0
+        
+        -- ลบ Atmosphere ถ้ามี
+        for _, v in pairs(Lighting:GetDescendants()) do
+            if v:IsA("Atmosphere") then
+                v:Destroy()
+            end
+        end
+        
+        -- ป้องกันเกมเซ็ตค่ากลับ (ถาวร)
+        Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
+            Lighting.FogEnd = 100000
+        end)
+        Lighting.DescendantAdded:Connect(function(v)
+            if v:IsA("Atmosphere") then
+                v:Destroy()
+            end
+        end)
+        
+        Rayfield:Notify({
+            Title = "ปิดหมอกสำเร็จ! 🔥",
+            Content = "มองเห็นไกลสุดขีด (กด Numpad4)",
+            Duration = 3,
+            Image = 13014647359
+        })
+    end
+})
+
+-- === แท็บวาป + ลากศพ (เวอร์ชันแยกหน้าที่เรียบร้อย) ===
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
+
+-- สร้างแท็บ
+local friendTab = Window:CreateTab("วาป")
+
+-- ===== Helpers =====
+local function getPlayerList()
+    local list = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            table.insert(list, string.format("%s (%s)", p.DisplayName, p.Name))
+        end
+    end
+    return list
+end
+
+-- ดึงศพทั้งหมดที่ลงท้ายชื่อด้วย " Body" จากโฟลเดอร์ Characters
+local function getAllBodies()
+    local folder = Workspace:FindFirstChild("Characters")
+    if not folder then return {} end
+    local bodies = {}
+    for _, obj in ipairs(folder:GetChildren()) do
+        if typeof(obj) == "Instance" and typeof(obj.Name) == "string" then
+            if obj.Name:sub(-5) == " Body" then
+                table.insert(bodies, obj)
+            end
+        end
+    end
+    return bodies
+end
+
+-- หา BasePart ใดๆ ในโมเดล (กันกรณีไม่มี PrimaryPart)
+local function findAnyBasePart(model)
+    if not model or not model:IsA("Model") then return nil end
+    if model.PrimaryPart then return model.PrimaryPart end
+    for _, d in ipairs(model:GetDescendants()) do
+        if d:IsA("BasePart") then
+            return d
+        end
+    end
+    return nil
+end
+
+-- ===== UI: Dropdown เพื่อน (ใช้เฉพาะ “วาปไปหาเพื่อน”) =====
+local friendDropdown = friendTab:CreateDropdown({
+    Name = "เลือกเพื่อน",
+    Options = getPlayerList(),
+    CurrentOption = {},
+    Flag = "FriendSelect"
+})
+
+-- ปุ่มวาปไปหาเพื่อน (ใช้ dropdown)
+friendTab:CreateButton({
+    Name = "วาปไปหาเพื่อน",
+    Callback = function()
+        local selected = friendDropdown.CurrentOption[1]
+        if not selected or selected == "" then
+            Rayfield:Notify({Title = "Error", Content = "กรุณาเลือกเพื่อนก่อน!", Duration = 3})
+            return
+        end
+
+        local friendName = selected:match("%((.-)%)") or selected
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+
+        local targetPlayer = Players:FindFirstChild(friendName)
+        if targetPlayer and targetPlayer.Character then
+            local thrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if thrp then
+                hrp.CFrame = thrp.CFrame + Vector3.new(0, 3, 0)
+                Rayfield:Notify({Title = "Teleport สำเร็จ", Content = "ไปหา "..friendName, Duration = 3})
+                return
+            end
+        end
+        Rayfield:Notify({Title = "ไม่พบเป้าหมาย", Content = "เพื่อนไม่ออนไลน์/ไม่มี HRP", Duration = 3})
+    end
+})
+
+-- ===== ตัวปรับค่า ลากศพ =====
+local DragOffset = 5
+local DragDelay = 0.2
+
+friendTab:CreateSlider({
+    Name = "ระยะห่างลากศพ (studs)",
+    Range = {1, 15},
+    Increment = 1,
+    CurrentValue = DragOffset,
+    Flag = "DragOffset",
+    Callback = function(val) DragOffset = val end
+})
+
+friendTab:CreateSlider({
+    Name = "ดีเลย์ลาก (วินาที)",
+    Range = {0.05, 1},
+    Increment = 0.05,
+    CurrentValue = DragDelay,
+    Flag = "DragDelay",
+    Callback = function(val) DragDelay = val end
+})
+
+-- ===== ปุ่ม “ลากศพทั้งหมด” (ไม่ใช้ dropdown) =====
+friendTab:CreateButton({
+    Name = "ลากศพทั้งหมด (ไม่ต้องเลือกชื่อ)",
+    Callback = function()
+        -- เตรียมตัวเรา
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+
+        -- เตรียม RemoteEvents
+        local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+        local startDragging = remoteEvents and remoteEvents:FindFirstChild("RequestStartDraggingItem")
+        local stopDragging  = remoteEvents and remoteEvents:FindFirstChild("StopDraggingItem")
+
+        if not (startDragging and stopDragging) then
+            Rayfield:Notify({Title = "ผิดพลาด", Content = "ไม่พบ RemoteEvent ลากศพ", Duration = 5})
+            return
+        end
+
+        -- หา “ศพทั้งหมด”
+        local bodies = getAllBodies()
+        if #bodies == 0 then
+            Rayfield:Notify({Title = "ไม่พบศพ", Content = "ตอนนี้ยังไม่มีใครตาย", Duration = 4})
+            return
+        end
+
+        Rayfield:Notify({Title = "กำลังลากศพ", Content = "พบ "..#bodies.." ตัว", Duration = 3})
+
+        task.spawn(function()
+            for _, body in ipairs(bodies) do
+                -- กันกรณีออบเจ็กต์หายระหว่างทาง
+                if body and body.Parent then
+                    local inst = (typeof(cloneref) == "function") and cloneref(body) or body
+                    startDragging:FireServer(inst)
+                    task.wait(0.02)
+
+                    -- เลือกพาร์ทอ้างอิงเพื่อวางให้ใกล้ตัวเรา
+                    local refPart = findAnyBasePart(body)
+                    if refPart then
+                        -- ใช้ PivotTo ให้ทั้งโมเดลเลื่อนมาหน้าเรา
+                        body:PivotTo(hrp.CFrame * CFrame.new(0, 0, -DragOffset))
+                    end
+
+                    task.wait(0.05)
+                    stopDragging:FireServer(inst)
+                    task.wait(DragDelay)
+                end
+            end
+
+            Rayfield:Notify({Title = "สำเร็จ!", Content = "ลากศพทั้งหมด "..#bodies.." ตัว!", Duration = 4})
+        end)
+    end
+})
+
+-- Hotkey สำหรับลากศพทั้งหมด (กด Numpad5)
+MainTab:CreateKeybind({  -- หรือ friendTab ถ้าอยากให้อยู่ในแท็บเดียวกัน
+    Name = "ลากศพทั้งหมด (Hotkey)",
+    CurrentKeybind = "KeypadEight",  -- หรือ "Numpad5"
+    HoldToInteract = false,         -- กดครั้งเดียวทำงาน
+    Callback = function()
+        -- เตรียมตัวเรา
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        -- เตรียม RemoteEvents
+        local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+        local startDragging = remoteEvents and remoteEvents:FindFirstChild("RequestStartDraggingItem")
+        local stopDragging  = remoteEvents and remoteEvents:FindFirstChild("StopDraggingItem")
+        if not (startDragging and stopDragging) then
+            Rayfield:Notify({Title = "ผิดพลาด", Content = "ไม่พบ RemoteEvent ลากศพ", Duration = 5})
+            return
+        end
+        -- หา "ศพทั้งหมด"
+        local bodies = getAllBodies()
+        if #bodies == 0 then
+            Rayfield:Notify({Title = "ไม่พบศพ", Content = "ตอนนี้ยังไม่มีใครตาย", Duration = 4})
+            return
+        end
+        Rayfield:Notify({Title = "กำลังลากศพ", Content = "พบ "..#bodies.." ตัว (กด Numpad5)", Duration = 3})
+        task.spawn(function()
+            for _, body in ipairs(bodies) do
+                -- กันกรณีออบเจ็กต์หายระหว่างทาง
+                if body and body.Parent then
+                    local inst = (typeof(cloneref) == "function") and cloneref(body) or body
+                    startDragging:FireServer(inst)
+                    task.wait(0.02)
+                    -- เลือกพาร์ทอ้างอิงเพื่อวางให้ใกล้ตัวเรา
+                    local refPart = findAnyBasePart(body)
+                    if refPart then
+                        -- ใช้ PivotTo ให้ทั้งโมเดลเลื่อนมาหน้าเรา
+                        body:PivotTo(hrp.CFrame * CFrame.new(0, 0, -DragOffset))
+                    end
+                    task.wait(0.05)
+                    stopDragging:FireServer(inst)
+                    task.wait(DragDelay)
+                end
+            end
+            Rayfield:Notify({Title = "สำเร็จ! 💀", Content = "ลากศพทั้งหมด "..#bodies.." ตัว!", Duration = 4})
+        end)
+    end
+})
+
+
+
+-- === แท็บวาปสถานที่ ===
+local tpTab = Window:CreateTab("วาปไปที่ต่างๆ")
+
+-- ตัวแปรเก็บปุ่มเพื่อลบตอนรีเฟรช
+local currentButtons = {}
+local locationLabel
+
+-- ประกาศ player ก่อนใช้
+local player = game.Players.LocalPlayer
+
+-- เก็บ Locations ไว้นอกฟังก์ชัน (สำคัญมาก!)
+local Locations = {}
+
+-- ชื่อภาษาไทย
+local thaiNames = {
+    StrongHold = "ปราสาทเพชร",
+    Fairy_House = "บ้านนางฟ้า", 
+    Ice_Temple = "วิหารน้ำแข็ง",
+    Jail_Cellar1 = "ห้องขังใต้ดิน 1",
+    Jail_Cellar2 = "ห้องขังใต้ดิน 2", 
+    Jail_Cellar3 = "ห้องขังใต้ดิน 3",
+    Jail_Cellar4 = "ห้องขังใต้ดิน 4",
+    SkillsBuilding = "อาคารฝึกสกิล",
+    Snow_Clothing_Shop = "ร้านเสื้อผ้าหิมะ",
+    ToolWorkshop = "โรงงา
